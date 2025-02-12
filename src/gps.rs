@@ -1,7 +1,12 @@
 use std::f64::consts::PI;
 
+use thiserror::Error;
+
+/// The radius of the Earth in meters, roughly
 const EARTH_RADIUS_METERS: u32 = 6_378_137;
+/// Multiply radians by this to get degrees
 const RAD_TO_DEG: f64 = 180.0 / PI;
+/// Multiply degrees by this to get radians
 const DEG_TO_RAD: f64 = PI / 180.0;
 
 /// A single point on the Earth, including altitude.
@@ -15,8 +20,12 @@ pub struct GPSPoint {
     altitude: Option<f64>,
 }
 
+#[derive(Debug, Error)]
 pub enum GPSError {
-    DivideByZero,
+    #[error("The operation could not be completed because the altitude field is None")]
+    NoAltitude,
+    #[error("The value ({0}) is not in the range {1} to {2}")]
+    OutOfRange(f64, f64, f64),
 }
 
 impl GPSPoint {
@@ -77,25 +86,33 @@ impl GPSPoint {
     }
 
     /// Find the elevation above the horizon (aka altitude, zenith) to another point.
-    pub fn elevation_to(self, other: &Self) -> Option<f64> {
+    ///
+    /// The result will never be greater than 90° or less than -90°.
+    pub fn elevation_to(self, other: &Self) -> Result<f64, GPSError> {
         // Distance in meters, and horizontal angle (azimuth)
         let horizontal_distance = self.distance_to(other);
 
         // Altitude difference in meters
-        let altitude_delta = self.altitude_to(other)?;
+        let altitude_delta = self.altitude_to(other)
+            .ok_or(GPSError::NoAltitude)?;
 
-        // In this case things would divide by zero, so it must be directly above or below
+        // In this case things would divide by zero, so it must be directly
+        // above or below, so bail out here and return
         if horizontal_distance == 0.0 {
-            if altitude_delta > 0.0 {
-                return Some(90.0)
-            } else if altitude_delta < 0.0 {
-                return Some(-90.0)
-            } else {
-                return Some(0.0)
+            match altitude_delta {
+                a if a > 0.0 => return Ok(90.0),
+                a if a < 0.0 => return Ok(-90.0),
+                _ => return Ok(0.0),
             }
         }
 
+        let final_angle = f64::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG;
+
+        if (-90.0..90.0).contains(&final_angle) {
+            return Err(GPSError::OutOfRange(final_angle, -90.0, 90.0))
+        }
+
         // Vertical angle (altitude)
-        Some(f64::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG)
+        Ok(final_angle)
     }
 }
