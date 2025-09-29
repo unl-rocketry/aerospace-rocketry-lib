@@ -1,5 +1,6 @@
 use core::ops::{Add, Deref};
 
+use ordered_float::OrderedFloat;
 use thiserror::Error;
 
 use crate::constants::{DEG_TO_RAD, RAD_TO_DEG};
@@ -15,8 +16,8 @@ pub enum GPSError {
     OutOfRange(f64, f64, f64),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Bearing(f64);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Bearing(OrderedFloat<f64>);
 
 impl Bearing {
     pub fn new(degrees: f64) -> Result<Self, GPSError> {
@@ -24,7 +25,7 @@ impl Bearing {
             return Err(GPSError::OutOfRange(degrees, 0.0, 360.0))
         }
 
-        Ok(Self(degrees))
+        Ok(Self(OrderedFloat(degrees)))
     }
 
     pub fn new_rad(radians: f64) -> Result<Self, GPSError> {
@@ -43,14 +44,14 @@ impl Deref for Bearing {
 }
 
 /// A single point on the Earth, including altitude.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Point {
     /// Latitude in decimal degrees
-    latitude: f64,
+    latitude: OrderedFloat<f64>,
     /// Longitude in decimal degrees
-    longitude: f64,
+    longitude: OrderedFloat<f64>,
     /// Altitude in meters
-    altitude: Option<f64>,
+    altitude: Option<OrderedFloat<f64>>,
 }
 
 impl Point {
@@ -64,9 +65,9 @@ impl Point {
         }
 
         Ok(Self {
-            latitude,
-            longitude,
-            altitude: Some(altitude),
+            latitude: OrderedFloat(latitude),
+            longitude: OrderedFloat(longitude),
+            altitude: Some(OrderedFloat(altitude)),
         })
     }
 
@@ -80,32 +81,32 @@ impl Point {
         }
 
         Ok(Self {
-            latitude,
-            longitude,
+            latitude: OrderedFloat(latitude),
+            longitude: OrderedFloat(longitude),
             altitude: None,
         })
     }
 
     pub const fn latitude(&self) -> f64 {
-        self.latitude
+        self.latitude.0
     }
 
     pub const fn longitude(&self) -> f64 {
-        self.longitude
+        self.longitude.0
     }
 
-    pub const fn altitude(&self) -> Option<f64> {
-        self.altitude
+    pub fn altitude(&self) -> Option<f64> {
+        self.altitude.map(|a| a.0)
     }
 
     /// Returns the latitude component in radians.
     pub const fn latitude_rad(&self) -> f64 {
-        self.latitude * DEG_TO_RAD
+        self.latitude.0 * DEG_TO_RAD
     }
 
     /// Returns the longitude component in radians.
     pub const fn longitude_rad(&self) -> f64 {
-        self.longitude * DEG_TO_RAD
+        self.longitude.0 * DEG_TO_RAD
     }
 
     /// Great-circle ground-only distance in meters between two GPS Points.
@@ -125,7 +126,7 @@ impl Point {
 
     pub fn altitude_to(self, other: Self) -> Option<f64> {
         if self.altitude.is_some() && other.altitude.is_some() {
-            Some(other.altitude.unwrap() - self.altitude.unwrap())
+            Some(other.altitude.unwrap().0 - self.altitude.unwrap().0)
         } else {
             None
         }
@@ -150,7 +151,7 @@ impl Point {
             bearing = (bearing + 360.0) % 360.0
         }
 
-        Bearing(bearing)
+        Bearing(OrderedFloat(bearing))
     }
 
     /// Find the elevation above the horizon (aka altitude, zenith) to another point.
@@ -192,7 +193,7 @@ impl Add<Self> for Point {
 
         new_self.latitude += rhs.latitude;
         new_self.longitude += rhs.longitude;
-        new_self.altitude = new_self.altitude.map(|a| a + rhs.altitude.unwrap_or(0.0));
+        new_self.altitude = new_self.altitude.map(|a| a + rhs.altitude.unwrap_or(0.0.into()));
 
         new_self
     }
@@ -233,6 +234,11 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
     let point_1b = offset_point_bearing(point_1a, point_1.1, 10.0)?;
     let point_2b = offset_point_bearing(point_2a, point_2.1, 10.0)?;
 
+    let denominator =
+        ((point_1a.longitude() - point_1b.longitude()) * (point_2a.latitude() - point_2b.latitude()))
+        -
+        ((point_2a.longitude() - point_2b.longitude()) * (point_1a.latitude() - point_1b.latitude()));
+
     // These equations are based on data from this article:
     // https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
     let intersection_x =
@@ -241,12 +247,7 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
             -
             ((point_2a.longitude() * point_2b.latitude() - point_2a.latitude() * point_2b.longitude()) * (point_1a.longitude() - point_1b.longitude()))
         )
-        /
-        (
-            ((point_1a.longitude() - point_1b.longitude()) * (point_2a.latitude() - point_2b.latitude()))
-            -
-            ((point_1a.latitude() - point_1b.latitude()) * (point_2a.longitude() - point_2b.longitude()))
-        );
+        / denominator;
 
     let intersection_y =
         (
@@ -254,12 +255,7 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
             -
             ((point_2a.longitude() * point_2b.latitude() - point_2a.latitude() * point_2b.longitude()) * (point_1a.latitude() - point_1b.latitude()))
         )
-        /
-        (
-            ((point_1a.longitude() - point_1b.longitude()) * (point_2a.latitude() - point_2b.latitude()))
-            -
-            ((point_1a.latitude() - point_1b.latitude()) * (point_2a.longitude() - point_2b.longitude()))
-        );
+        / denominator;
 
     Point::new_2d(intersection_y, intersection_x)
 }
