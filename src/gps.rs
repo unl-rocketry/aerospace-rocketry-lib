@@ -3,7 +3,6 @@
 //! This module utilizes some constants and items from the [`crate::constants`]
 //! module.
 
-
 use core::ops::{Add, Deref};
 
 use ordered_float::OrderedFloat;
@@ -35,6 +34,18 @@ impl Bearing {
         let degrees = radians * RAD_TO_DEG;
 
         Self::new(degrees)
+    }
+
+    pub fn into_inner(self) -> f64 {
+        self.0.0
+    }
+
+    pub fn degrees(&self) -> f64 {
+        self.0.0
+    }
+
+    pub fn radians(&self) -> f64 {
+        self.0.0 * DEG_TO_RAD
     }
 }
 
@@ -90,24 +101,27 @@ impl Point {
         })
     }
 
+    /// The latitude component.
     pub const fn latitude(&self) -> f64 {
         self.latitude.0
     }
 
+    /// The longitude component.
     pub const fn longitude(&self) -> f64 {
         self.longitude.0
     }
 
+    /// The altitude component, if it exists.
     pub fn altitude(&self) -> Option<f64> {
         self.altitude.map(|a| a.0)
     }
 
-    /// Returns the latitude component in radians.
+    /// The latitude component in radians.
     pub const fn latitude_rad(&self) -> f64 {
         self.latitude.0 * DEG_TO_RAD
     }
 
-    /// Returns the longitude component in radians.
+    /// The longitude component in radians.
     pub const fn longitude_rad(&self) -> f64 {
         self.longitude.0 * DEG_TO_RAD
     }
@@ -117,16 +131,20 @@ impl Point {
         let delta_lat_rad = other.latitude_rad() - self.latitude_rad();
         let delta_lon_rad = other.longitude_rad() - self.longitude_rad();
 
-        let a = f64::sin(delta_lat_rad / 2.0).powi(2)
-            + f64::cos(self.latitude_rad())
-                * f64::cos(other.latitude_rad())
-                * f64::sin(delta_lon_rad / 2.0).powi(2);
+        let a = libm::pow(libm::sin(delta_lat_rad / 2.0), 2.0)
+            + libm::cos(self.latitude_rad())
+                * libm::cos(other.latitude_rad())
+                * libm::pow(libm::sin(delta_lon_rad / 2.0), 2.0);
 
-        let c = 2.0 * f64::atan2(f64::sqrt(a), f64::sqrt(1.0 - a));
+        let c = 2.0 * libm::atan2(libm::sqrt(a), libm::sqrt(1.0 - a));
 
         EARTH_RADIUS_METERS as f64 * c
     }
 
+    /// Computes the altitude difference from one point to another.
+    ///
+    /// This does not take into acccount differences in altitude because of
+    /// differing locations on the Earth.
     pub fn altitude_to(self, other: Self) -> Option<f64> {
         if self.altitude.is_some() && other.altitude.is_some() {
             Some(other.altitude.unwrap().0 - self.altitude.unwrap().0)
@@ -138,12 +156,12 @@ impl Point {
     /// Find the absolute bearing (azimuth) to another point.
     pub fn bearing_to(self, other: Self, positive: bool) -> Bearing {
         // Calculate the bearing
-        let bearing = f64::atan2(
-            f64::sin(other.longitude_rad() - self.longitude_rad()) * f64::cos(other.latitude_rad()),
-            f64::cos(self.latitude_rad()) * f64::sin(other.latitude_rad())
-                - f64::sin(self.latitude_rad())
-                    * f64::cos(other.latitude_rad())
-                    * f64::cos(other.longitude_rad() - self.longitude_rad()),
+        let bearing = libm::atan2(
+            libm::sin(other.longitude_rad() - self.longitude_rad()) * libm::cos(other.latitude_rad()),
+            libm::cos(self.latitude_rad()) * libm::sin(other.latitude_rad())
+                - libm::sin(self.latitude_rad())
+                    * libm::cos(other.latitude_rad())
+                    * libm::cos(other.longitude_rad() - self.longitude_rad()),
         );
 
         // Convert the bearing to degrees
@@ -177,7 +195,7 @@ impl Point {
             }
         }
 
-        let final_angle = f64::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG;
+        let final_angle = libm::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG;
 
         if (-90.0..90.0).contains(&final_angle) {
             return Err(GPSError::OutOfRange(final_angle, -90.0, 90.0));
@@ -264,25 +282,25 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
 }
 
 pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Result<Point, GPSError> {
-    let bearing_rad = bearing.0 * DEG_TO_RAD;
+    let bearing_rad = *bearing * DEG_TO_RAD;
 
     // Starting lat/lon in radians
     let lat1 = point.latitude_rad();
     let lon1 = point.longitude_rad();
 
     // Forward geodesic on a sphere
-    let sin_lat1 = lat1.sin();
-    let cos_lat1 = lat1.cos();
+    let sin_lat1 = libm::sin(lat1);
+    let cos_lat1 = libm::cos(lat1);
     let ang_dist = distance / EARTH_RADIUS_METERS as f64;
 
-    let sin_ad = ang_dist.sin();
-    let cos_ad = ang_dist.cos();
+    let sin_ad = libm::sin(ang_dist);
+    let cos_ad = libm::cos(ang_dist);
 
-    let lat2 = (sin_lat1 * cos_ad + cos_lat1 * sin_ad * bearing_rad.cos()).asin();
+    let lat2 = sin_lat1 * cos_ad + cos_lat1 * sin_ad * libm::asin(libm::cos(bearing_rad));
 
-    let y = bearing_rad.sin() * sin_ad * cos_lat1;
-    let x = cos_ad - sin_lat1 * lat2.sin();
-    let lon2 = lon1 + y.atan2(x);
+    let y = libm::sin(bearing_rad) * sin_ad * cos_lat1;
+    let x = cos_ad - sin_lat1 * libm::sin(lat2);
+    let lon2 = lon1 + libm::atan2(y, x);
 
     // Convert back to degrees
     let lat2_deg = lat2 * RAD_TO_DEG;
