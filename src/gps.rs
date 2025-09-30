@@ -1,12 +1,15 @@
+//! Utilities for working with GPS and geospatial coordinate systems.
+//!
+//! This module utilizes some constants and items from the [`crate::constants`]
+//! module.
+
+
 use core::ops::{Add, Deref};
 
 use ordered_float::OrderedFloat;
 use thiserror::Error;
 
-use crate::constants::{DEG_TO_RAD, RAD_TO_DEG};
-
-/// The radius of the Earth in meters, roughly
-pub const EARTH_RADIUS_METERS: u32 = 6_378_137;
+use crate::constants::{DEG_TO_RAD, EARTH_RADIUS_METERS, RAD_TO_DEG};
 
 #[derive(Debug, Error)]
 pub enum GPSError {
