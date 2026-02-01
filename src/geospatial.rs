@@ -321,6 +321,10 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
     let point_1a = point_1.0;
     let point_2a = point_2.0;
 
+    if point_1a == point_2a {
+        return Ok(point_1a)
+    }
+
     let point_1b = offset_point_bearing(point_1a, point_1.1, 10.0)?;
     let point_2b = offset_point_bearing(point_2a, point_2.1, 10.0)?;
 

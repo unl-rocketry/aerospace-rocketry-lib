@@ -3,7 +3,7 @@
 //! Generally the things in this module apply to the [`crate::geospatial`] module as
 //! well, but this one is not designed to be geospatial-specific.
 
-/// Find the centroid of a polygon using its verticies.
+/// Find the mean centroid of a polygon using its vertices.
 ///
 /// Returns an ordered pair corresponding to the position of the centroid in
 /// the plane. There is no guarantee that the centroid is contained within the
