@@ -14,37 +14,60 @@ use crate::constants::{DEG_TO_RAD, EARTH_RADIUS_METERS, RAD_TO_DEG};
 pub enum GPSError {
     #[error("The operation could not be completed because the altitude field is None")]
     NoAltitude,
-    #[error("The value ({0}) is not in the range {1} to {2}")]
-    OutOfRange(f64, f64, f64),
+    #[error("The value ({val}) is not in the range {low} to {high}")]
+    OutOfRange {
+        val: f64,
+        low: f64,
+        high: f64,
+    },
 }
 
+/// An euclidean angle which defines a bearing from a point.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Bearing(OrderedFloat<f64>);
 
 impl Bearing {
+    /// Create a new bearing from degrees.
+    ///
+    /// # Errors
+    /// This function errors if the input is not in the range `(0.0..360.0)`.
     pub fn new(degrees: f64) -> Result<Self, GPSError> {
         if !(0.0..360.0).contains(&degrees) {
-            return Err(GPSError::OutOfRange(degrees, 0.0, 360.0))
+            return Err(GPSError::OutOfRange {
+                val: degrees,
+                low: 0.0,
+                high: 360.0
+            })
         }
 
         Ok(Self(OrderedFloat(degrees)))
     }
 
+    /// Create a new bearing from radians.
+    ///
+    /// # Errors
+    /// This function errors if the input is not in the range `(0.0..2π)`.
     pub fn new_rad(radians: f64) -> Result<Self, GPSError> {
         let degrees = radians * RAD_TO_DEG;
 
         Self::new(degrees)
     }
 
-    pub fn into_inner(self) -> f64 {
+    /// Gets the internal value.
+    #[must_use]
+    pub const fn into_inner(self) -> f64 {
         self.0.0
     }
 
-    pub fn degrees(&self) -> f64 {
+    /// Bearing in degrees.
+    #[must_use]
+    pub const fn degrees(&self) -> f64 {
         self.0.0
     }
 
-    pub fn radians(&self) -> f64 {
+    /// Bearing in radians.
+    #[must_use]
+    pub const fn radians(&self) -> f64 {
         self.0.0 * DEG_TO_RAD
     }
 }
@@ -69,13 +92,28 @@ pub struct Point {
 }
 
 impl Point {
+    /// Create a new 3D [`Point`].
+    ///
+    /// Being 3D means it includes altitude.
+    ///
+    /// # Errors
+    /// If the Latitude is outside the range `-90.0..90.0`, or the Longitude is
+    /// outside the range `-180.0..180.0`, then an error will be returned.
     pub fn new_3d(latitude: f64, longitude: f64, altitude: f64) -> Result<Self, GPSError> {
         if !(-90.0..90.0).contains(&latitude) {
-            return Err(GPSError::OutOfRange(latitude, -90.0, 90.0))
+            return Err(GPSError::OutOfRange {
+                val: latitude,
+                low: -90.0,
+                high: 90.0
+            })
         }
 
         if !(-180.0..180.0).contains(&longitude) {
-            return Err(GPSError::OutOfRange(longitude, -180.0, 180.0))
+            return Err(GPSError::OutOfRange {
+                val: longitude,
+                low: -180.0,
+                high: 180.0
+            })
         }
 
         Ok(Self {
@@ -85,13 +123,28 @@ impl Point {
         })
     }
 
+    /// Create a new 2D [`Point`].
+    ///
+    /// Being 2D means it does not include altitude.
+    ///
+    /// # Errors
+    /// If the Latitude is outside the range `-90.0..90.0`, or the Longitude is
+    /// outside the range `-180.0..180.0`, then an error will be returned.
     pub fn new_2d(latitude: f64, longitude: f64) -> Result<Self, GPSError> {
         if !(-90.0..90.0).contains(&latitude) {
-            return Err(GPSError::OutOfRange(latitude, -90.0, 90.0))
+            return Err(GPSError::OutOfRange {
+                val: latitude,
+                low: -90.0,
+                high: 90.0
+            })
         }
 
         if !(-180.0..180.0).contains(&longitude) {
-            return Err(GPSError::OutOfRange(longitude, -180.0, 180.0))
+            return Err(GPSError::OutOfRange {
+                val: longitude,
+                low: -180.0,
+                high: 180.0
+            })
         }
 
         Ok(Self {
@@ -102,31 +155,37 @@ impl Point {
     }
 
     /// The latitude component.
+    #[must_use]
     pub const fn latitude(&self) -> f64 {
         self.latitude.0
     }
 
     /// The longitude component.
+    #[must_use]
     pub const fn longitude(&self) -> f64 {
         self.longitude.0
     }
 
     /// The altitude component, if it exists.
+    #[must_use]
     pub fn altitude(&self) -> Option<f64> {
         self.altitude.map(|a| a.0)
     }
 
     /// The latitude component in radians.
+    #[must_use]
     pub const fn latitude_rad(&self) -> f64 {
         self.latitude.0 * DEG_TO_RAD
     }
 
     /// The longitude component in radians.
+    #[must_use]
     pub const fn longitude_rad(&self) -> f64 {
         self.longitude.0 * DEG_TO_RAD
     }
 
     /// Great-circle ground-only distance in meters between two GPS Points.
+    #[must_use]
     pub fn distance_to(self, other: Self) -> f64 {
         let delta_lat_rad = other.latitude_rad() - self.latitude_rad();
         let delta_lon_rad = other.longitude_rad() - self.longitude_rad();
@@ -138,22 +197,24 @@ impl Point {
 
         let c = 2.0 * libm::atan2(libm::sqrt(a), libm::sqrt(1.0 - a));
 
-        EARTH_RADIUS_METERS as f64 * c
+        f64::from(EARTH_RADIUS_METERS) * c
     }
 
     /// Computes the altitude difference from one point to another.
     ///
     /// This does not take into acccount differences in altitude because of
     /// differing locations on the Earth.
+    #[must_use]
     pub fn altitude_to(self, other: Self) -> Option<f64> {
-        if self.altitude.is_some() && other.altitude.is_some() {
-            Some(other.altitude.unwrap().0 - self.altitude.unwrap().0)
+        if let Some(self_alt) = self.altitude && let Some(other_alt) = other.altitude {
+            Some(self_alt.0 - other_alt.0)
         } else {
             None
         }
     }
 
     /// Find the absolute bearing (azimuth) to another point.
+    #[must_use]
     pub fn bearing_to(self, other: Self, positive: bool) -> Bearing {
         // Calculate the bearing
         let bearing = libm::atan2(
@@ -169,7 +230,7 @@ impl Point {
 
         // Ensure the value is from 0→360 instead of -180→180
         if positive {
-            bearing = (bearing + 360.0) % 360.0
+            bearing = (bearing + 360.0) % 360.0;
         }
 
         Bearing(OrderedFloat(bearing))
@@ -178,6 +239,10 @@ impl Point {
     /// Find the elevation above the horizon (aka altitude, zenith) to another point.
     ///
     /// The result will never be greater than 90° or less than -90°.
+    ///
+    /// # Errors
+    /// This function errors if the current point and/or the other point does
+    /// not contain an altitude component.
     pub fn elevation_to(self, other: Self) -> Result<f64, GPSError> {
         // Distance in meters, and horizontal angle (azimuth)
         let horizontal_distance = self.distance_to(other);
@@ -198,7 +263,11 @@ impl Point {
         let final_angle = libm::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG;
 
         if (-90.0..90.0).contains(&final_angle) {
-            return Err(GPSError::OutOfRange(final_angle, -90.0, 90.0));
+            return Err(GPSError::OutOfRange {
+                val: final_angle,
+                low: -90.0,
+                high: 90.0
+            });
         }
 
         // Vertical angle (altitude)
@@ -214,7 +283,7 @@ impl Add<Self> for Point {
 
         new_self.latitude += rhs.latitude;
         new_self.longitude += rhs.longitude;
-        new_self.altitude = new_self.altitude.map(|a| a + rhs.altitude.unwrap_or(0.0.into()));
+        new_self.altitude = new_self.altitude.map(|a| a + rhs.altitude.unwrap_or_else(|| 0.0.into()));
 
         new_self
     }
@@ -247,7 +316,7 @@ impl Add<(f64, f64, f64)> for Point {
     }
 }
 
-/// Find the Latitude-Longitude intersection point between two rays from points with bearings.
+/// Find the Latitude-Longitude intersection point between two rays from points with [`Bearing`]s.
 pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)) -> Result<Point, GPSError> {
     let point_1a = point_1.0;
     let point_2a = point_2.0;
@@ -281,6 +350,8 @@ pub fn bearing_intersection(point_1: (Point, Bearing), point_2: (Point, Bearing)
     Point::new_2d(intersection_y, intersection_x)
 }
 
+/// Get a point on the Earth offset along a vector defined by a [`Bearing`] and
+/// a `distance`.
 pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Result<Point, GPSError> {
     let bearing_rad = *bearing * DEG_TO_RAD;
 
@@ -291,12 +362,12 @@ pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Re
     // Forward geodesic on a sphere
     let sin_lat1 = libm::sin(lat1);
     let cos_lat1 = libm::cos(lat1);
-    let ang_dist = distance / EARTH_RADIUS_METERS as f64;
+    let ang_dist = distance / f64::from(EARTH_RADIUS_METERS);
 
     let sin_ad = libm::sin(ang_dist);
     let cos_ad = libm::cos(ang_dist);
 
-    let lat2 = sin_lat1 * cos_ad + cos_lat1 * sin_ad * libm::asin(libm::cos(bearing_rad));
+    let lat2 = libm::asin(sin_lat1 * cos_ad + cos_lat1 * sin_ad * libm::cos(bearing_rad));
 
     let y = libm::sin(bearing_rad) * sin_ad * cos_lat1;
     let x = cos_ad - sin_lat1 * libm::sin(lat2);

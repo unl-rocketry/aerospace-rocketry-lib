@@ -8,9 +8,9 @@
 //! ## Units
 //! Unless stated otherwise, all the functions in this library utilize the
 //! following units for their input and output. For example,
-//! [`gps::Point::latitude`] returns **decimal degrees**, while
-//! [`gps::Point::latitude_rad`] returns **radians**. The internal types of
-//! the [`gps::Point`] type are expressed in the units below.
+//! [`geospatial::Point::latitude`] returns **decimal degrees**, while
+//! [`geospatial::Point::latitude_rad`] returns **radians**. The internal types of
+//! the [`geospatial::Point`] type are expressed in the units below.
 //!
 //! | Measurement | Unit            |
 //! |-------------|-----------------|
@@ -30,5 +30,5 @@
 #![no_std]
 
 pub mod constants;
-pub mod gps;
+pub mod geospatial;
 pub mod geometry;
