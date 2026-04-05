@@ -383,3 +383,34 @@ pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Re
 
     Point::new_2d(lat2_deg, lon2_deg)
 }
+
+/// A packet of relevant variables and measurements to calculate altitude
+pub struct BarometricEquationValues {
+    /// Measured pressure at current altitude, in Pa
+    p: f32,
+    /// Reference pressure at ground level, in Pa
+    p_ref: f32,
+    /// Geopotential height of reference level, in m
+    h_ref: f32
+}
+
+#[allow(non_upper_case_globals)]
+impl BarometricEquationValues {
+    /// Universal gas constant
+    const R: f32 = 8314.46;
+    /// Gravitational acceleration
+    const g: f32 = -9.80665;
+    /// Reference temperature
+    const T_REF: f32 = 288.15;
+    /// Mean molar mass of air
+    const M: f32 = 28.9644;
+
+    /// Calculates altitude using the barometric formula, assuming that temperature does not vary with altitude.
+    pub fn calculate_barometric_altitude(self) -> f32 {
+        let a = Self::R * Self::T_REF;
+        let b = libm::logf(self.p / self.p_ref);
+        let c = Self::M * Self::g;
+
+        ((a * b) / c) + self.h_ref
+    }
+}
