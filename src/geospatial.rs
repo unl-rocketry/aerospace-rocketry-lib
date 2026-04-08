@@ -385,19 +385,19 @@ pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Re
 }
 
 #[allow(non_snake_case)]
-/// Calculates altitude using the barometric formula, assuming that temperature does not vary with altitude.
+/// Calculates altitude using the barometric formula.
 pub fn calculate_barometric_altitude(pressure: f32) -> f32 {
-    // Universal gas constant
+    // Universal gas constant (J/molK)
     let R: f32 = 8.31446;
-    // Gravitational acceleration
+    // Gravitational acceleration (m/s^2)
     let g: f32 = -9.80665;
-    // Reference temperature
+    // Reference temperature (K)
     let T_REF: f32 = 288.15;
-    // Mean molar mass of air
+    // Mean molar mass of air (kg/mol)
     let M: f32 = 0.0289644;
-    // Lapse rate
+    // Lapse rate or temperature gradient (K/m)
     let L: f32 = 0.0065;
-    // Reference Pressure
+    // Reference pressure (Pa)
     let P_REF: f32 = 101325.0;
 
     let a = T_REF / L;
