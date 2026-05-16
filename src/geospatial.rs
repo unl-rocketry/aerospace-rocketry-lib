@@ -396,7 +396,7 @@ pub fn calculate_barometric_altitude(pressure: f32) -> f32 {
     // Mean molar mass of air (kg/mol)
     let M: f32 = 0.0289644;
     // Lapse rate or temperature gradient (K/m)
-    let L: f32 = -1.0 * 0.0065;
+    let L: f32 = -0.0065;
     // Reference pressure (Pa)
     let P_REF: f32 = 101325.0;
 
