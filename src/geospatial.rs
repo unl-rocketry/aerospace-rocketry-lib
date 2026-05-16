@@ -404,6 +404,6 @@ pub fn calculate_barometric_altitude(pressure: f32) -> f32 {
     let b = pressure / P_REF;
     let exp = (R * L) / (M * g);
 
-    a * (1.0 - libm::powf(b, exp))
+    a * (libm::powf(b, exp) - 1.0)
 
 }
