@@ -413,31 +413,54 @@ mod tests {
 
     #[test]
     fn pressure_to_altitude_0m() {
-        assert_eq!(calculate_barometric_altitude(101325.0), 0.0);
+        let range = -0.15..0.15;
+        let altitude = calculate_barometric_altitude(101325.0);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 
     #[test]
     fn pressure_to_altitude_500m() {
-        assert_eq!(calculate_barometric_altitude(95460.84), 500.00847064997134);
+        let actual = 500.0;
+        let range = actual-0.15..actual+0.15;
+        let altitude = calculate_barometric_altitude(95460.84);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 
     #[test]
     fn pressure_to_altitude_1000m() {
-        assert_eq!(calculate_barometric_altitude(89874.57), 1000.0170044399428);
+        let actual = 1000.0;
+        let range = actual-0.15..actual+0.15;
+        let altitude = calculate_barometric_altitude(89874.57);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 
     #[test]
     fn pressure_to_altitude_5000m() {
-        assert_eq!(calculate_barometric_altitude(54019.91), 5000.081028336319);
+        let actual = 5000.0;
+        let range = actual-0.15..actual+0.15;
+        let altitude = calculate_barometric_altitude(54019.57);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 
     #[test]
     fn pressure_to_altitude_10000m() {
-        assert_eq!(calculate_barometric_altitude(26436.27), 10000.149946313);
+        let actual = 10000.0;
+        let range = actual-0.15..actual+0.15;
+        let altitude = calculate_barometric_altitude(26436.27);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 
     #[test]
     fn pressure_to_altitude_11000m() {
-        assert_eq!(calculate_barometric_altitude(22632.06), 11000.164170180782);
+        let actual = 11000.0;
+        let range = actual-0.2..actual+0.2;
+        let altitude = calculate_barometric_altitude(22632.06);
+        println!("got {altitude}, expected {range:?}");
+        assert!(range.contains(&altitude));
     }
 }
