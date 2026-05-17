@@ -419,7 +419,8 @@ mod tests {
 
     #[test]
     fn pressure_to_altitude_0m() {
-        let range = -0.15..0.15;
+        let actual = 0.0;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(101325.0);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
