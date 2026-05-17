@@ -1,6 +1,6 @@
 //! Various utilities that don't fit in other modules.
 
-/// Calculate the CRC for some arbitrary data.
+/// Calculate an 8-bit CRC for some arbitrary data.
 #[must_use]
 pub fn crc8(arr: &[u8]) -> u8 {
     let mut crc = 0x00;
