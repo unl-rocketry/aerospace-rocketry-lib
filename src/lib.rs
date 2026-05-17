@@ -29,6 +29,10 @@
 
 #![no_std]
 
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 pub mod constants;
 pub mod geospatial;
 pub mod geometry;

@@ -384,26 +384,60 @@ pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Re
     Point::new_2d(lat2_deg, lon2_deg)
 }
 
-#[allow(non_snake_case)]
 /// Calculates altitude using the barometric formula.
-pub fn calculate_barometric_altitude(pressure: f32) -> f32 {
+#[allow(non_snake_case)]
+pub fn calculate_barometric_altitude(pressure: f64) -> f64 {
     // Universal gas constant (J/molK)
-    let R: f32 = 8.31446;
+    let R: f64 = 8.31446261815324;
     // Gravitational acceleration (m/s^2)
-    let g: f32 = -9.80665;
+    let g: f64 = -9.80665;
     // Reference temperature (K)
-    let T_REF: f32 = 288.15;
+    let T_REF: f64 = 288.15;
     // Mean molar mass of air (kg/mol)
-    let M: f32 = 0.0289644;
+    let M: f64 = 0.0289644;
     // Lapse rate or temperature gradient (K/m)
-    let L: f32 = -0.0065;
+    let L: f64 = -0.0065;
     // Reference pressure (Pa)
-    let P_REF: f32 = 101325.0;
+    let P_REF: f64 = 101325.0;
 
     let a = T_REF / L;
     let b = pressure / P_REF;
     let exp = (R * L) / (M * g);
 
-    a * (libm::powf(b, exp) - 1.0)
+    a * (libm::pow(b, exp) - 1.0)
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pressure_to_altitude_0m() {
+        assert_eq!(calculate_barometric_altitude(101325.0), 0.0);
+    }
+
+    #[test]
+    fn pressure_to_altitude_500m() {
+        assert_eq!(calculate_barometric_altitude(95460.84), 500.00847064997134);
+    }
+
+    #[test]
+    fn pressure_to_altitude_1000m() {
+        assert_eq!(calculate_barometric_altitude(89874.57), 1000.0170044399428);
+    }
+
+    #[test]
+    fn pressure_to_altitude_5000m() {
+        assert_eq!(calculate_barometric_altitude(54019.91), 5000.081028336319);
+    }
+
+    #[test]
+    fn pressure_to_altitude_10000m() {
+        assert_eq!(calculate_barometric_altitude(26436.27), 10000.149946313);
+    }
+
+    #[test]
+    fn pressure_to_altitude_11000m() {
+        assert_eq!(calculate_barometric_altitude(22632.06), 11000.164170180782);
+    }
 }
