@@ -388,7 +388,7 @@ pub fn offset_point_bearing(point: Point, bearing: Bearing, distance: f64) -> Re
 #[allow(non_snake_case)]
 pub fn calculate_barometric_altitude(pressure: f64) -> f64 {
     // Universal gas constant (J/molK)
-    let R: f64 = 8.31446261815324;
+    let R: f64 = 8.31432;
     // Gravitational acceleration (m/s^2)
     let g: f64 = -9.80665;
     // Reference temperature (K)
@@ -409,7 +409,13 @@ pub fn calculate_barometric_altitude(pressure: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use core::ops::Range;
+
     use super::*;
+
+    const fn get_range(actual: f64) -> Range<f64> {
+        actual - 0.05..actual + 0.05
+    }
 
     #[test]
     fn pressure_to_altitude_0m() {
@@ -422,7 +428,7 @@ mod tests {
     #[test]
     fn pressure_to_altitude_500m() {
         let actual = 500.0;
-        let range = actual-0.15..actual+0.15;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(95460.84);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
@@ -431,7 +437,7 @@ mod tests {
     #[test]
     fn pressure_to_altitude_1000m() {
         let actual = 1000.0;
-        let range = actual-0.15..actual+0.15;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(89874.57);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
@@ -440,7 +446,7 @@ mod tests {
     #[test]
     fn pressure_to_altitude_5000m() {
         let actual = 5000.0;
-        let range = actual-0.15..actual+0.15;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(54019.57);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
@@ -449,7 +455,7 @@ mod tests {
     #[test]
     fn pressure_to_altitude_10000m() {
         let actual = 10000.0;
-        let range = actual-0.15..actual+0.15;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(26436.27);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
@@ -458,7 +464,7 @@ mod tests {
     #[test]
     fn pressure_to_altitude_11000m() {
         let actual = 11000.0;
-        let range = actual-0.2..actual+0.2;
+        let range = get_range(actual);
         let altitude = calculate_barometric_altitude(22632.06);
         println!("got {altitude}, expected {range:?}");
         assert!(range.contains(&altitude));
