@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 libm = "0.2"
-ordered-float = { version = "5.1", default-features = false, features = ["libm"] }
+ordered-float = { version = "5.3", default-features = false, features = ["libm"] }
 thiserror = { version = "2.0", default-features = false }
