@@ -262,7 +262,7 @@ impl Point {
 
         let final_angle = libm::atan(altitude_delta / horizontal_distance) * RAD_TO_DEG;
 
-        if (-90.0..90.0).contains(&final_angle) {
+        if !(-90.0..90.0).contains(&final_angle) {
             return Err(GPSError::OutOfRange {
                 val: final_angle,
                 low: -90.0,
