@@ -21,13 +21,21 @@
 //! | Time        | Seconds         |
 //!
 //! ## `no_std`
-//! This library is `no_std` compatible to allow for running on microcontrollers
+//! This crate is `no_std` compatible to allow for running on microcontrollers
 //! and other devices which don't support `std`. Functions may be added in the
 //! future which require `std` support, and a feature flag will be added to
 //! allow for disabling these functions if not required.
 //!
+//! ## Tests
+//! This crate contains tests for many of the functions. The tests require the
+//! `std` library, and it is automatically enabled for testing.
 
 #![no_std]
+
+// Enable `std` for tests
+#[cfg(test)]
+#[macro_use]
+extern crate std;
 
 pub mod constants;
 pub mod geospatial;
